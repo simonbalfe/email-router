@@ -1,124 +1,91 @@
-# Simple Boilerplate
+# Email Router
 
-Hono API + React SPA + Drizzle ORM + Better Auth + TanStack Router in a single deployable container.
+AI-powered email classifier and forwarder. Connects to an IMAP inbox, uses Claude to classify each email as a request, spam, or irrelevant, and automatically forwards legitimate requests to a specified address.
+
+## How it works
+
+1. Listens to an IMAP mailbox for new emails
+2. Sends each email to Claude (via OpenRouter) for classification
+3. Forwards emails classified as "request" via SMTP
+4. Stores all processed emails with classification results in Postgres
+5. Web dashboard to view processed emails and start/stop the listener
 
 ## Stack
 
-- **API**: Hono with typed RPC client (`hono/client`)
+- **API**: Hono + Drizzle ORM + Better Auth
+- **AI**: Mastra agent framework + Claude Sonnet 4 (OpenRouter)
+- **Email**: ImapFlow (IMAP), nodemailer (SMTP), mailparser
 - **Frontend**: React + TanStack Router + TanStack Query
-- **Auth**: Better Auth
-- **Database**: Drizzle ORM + Postgres
-- **Styling**: Tailwind CSS + Radix UI
-
-## Hono RPC
-
-The API exports its type (`AppRouter`) and the frontend imports it to get a fully typed API client with zero codegen.
-
-```ts
-// API (apps/api/src/app.ts)
-const app = new Hono().basePath('/api').route('/', todoRoutes)
-export type AppRouter = typeof app
-
-// Frontend (apps/web/src/modules/shared/lib/api.ts)
-import type { AppRouter } from '@repo/api'
-import { hc } from 'hono/client'
-export const api = hc<AppRouter>('/')
-
-// Usage
-const res = await api.api.todos.$get()
-const data = await res.json()
-```
-
-Routes must use **method chaining** (not separate instances) for types to flow through.
-
-## Project Structure
-
-```
-apps/
-  api/          Hono API server (routes, auth, db, config)
-  web/          React SPA (TanStack Router, TanStack Query)
-server.ts       Production entry point (serves API + static SPA)
-```
+- **Database**: PostgreSQL
+- **Deployment**: Docker + GitHub Actions + GHCR
 
 ## Local Development
 
 ```bash
 cp .env.example .env
-# Fill in your .env values
+# Fill in values (see Environment Variables below)
 
 pnpm install
 pnpm dev
 ```
 
+## Environment Variables
+
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `BETTER_AUTH_SECRET` | Random string, 32+ chars (`openssl rand -hex 32`) |
+| `APP_URL` | App URL, e.g. `http://localhost:3000` or `https://yourdomain.com` |
+| `OPENROUTER_API_KEY` | OpenRouter API key for Claude access |
+| `IMAP_HOST` | IMAP server hostname |
+| `IMAP_PORT` | IMAP port (default: 993) |
+| `IMAP_USER` | IMAP email account |
+| `IMAP_PASS` | IMAP password |
+| `IMAP_FOLDER` | Folder to monitor (default: INBOX) |
+| `SMTP_HOST` | SMTP server hostname |
+| `SMTP_PORT` | SMTP port (default: 465) |
+| `SMTP_USER` | SMTP username |
+| `SMTP_PASS` | SMTP password |
+| `FORWARD_TO` | Email address to forward requests to |
+
 ## Deploy
 
-`git push origin main` builds and deploys automatically.
+Push to `main` triggers GitHub Actions to build a Docker image, push to GHCR, and hit a deploy webhook.
 
-GitHub Actions builds a Docker image, pushes to GHCR, and hits a webhook to redeploy your app.
+### Setup
 
-### 1. Push to GitHub
-
-Create a repo and push this project.
-
-### 2. Add Postgres to your PaaS
-
-In Coolify/Dokploy, create a new Postgres database. Copy the connection string.
-
-### 3. Create the app in your PaaS
-
-Create a new **Docker Compose** project and paste this:
+1. Create a Postgres database on your PaaS
+2. Create a Docker Compose project with:
 
 ```yaml
 services:
   app:
-    image: ghcr.io/<your-username>/<repo-name>:latest
+    image: ghcr.io/simonbalfe/email-router:latest
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=production
-      - DATABASE_URL=postgresql://user:password@host:5432/dbname
-      - BETTER_AUTH_SECRET=generate-a-random-string-at-least-32-chars
-      - APP_URL=https://yourdomain.com
+      NODE_ENV: production
+      DATABASE_URL: postgresql://user:password@host:5432/dbname
+      BETTER_AUTH_SECRET: your-secret
+      APP_URL: https://yourdomain.com
+      OPENROUTER_API_KEY: your-key
+      IMAP_HOST: imap.example.com
+      IMAP_PORT: 993
+      IMAP_USER: you@example.com
+      IMAP_PASS: your-password
+      SMTP_HOST: smtp.example.com
+      SMTP_PORT: 465
+      SMTP_USER: you@example.com
+      SMTP_PASS: your-password
+      FORWARD_TO: forward@example.com
 ```
 
-Replace the values:
-
-| Variable | What it is |
-|---|---|
-| `DATABASE_URL` | Postgres connection string from step 2 |
-| `BETTER_AUTH_SECRET` | Random string, 32+ chars (run `openssl rand -hex 32`) |
-| `APP_URL` | Your production URL, e.g. `https://app.yourdomain.com` |
-
-Then point your domain to the app and expose port `3000`.
-
-### 4. Add GHCR registry
-
-Your image is on GitHub Container Registry (private). In your PaaS, add a Docker registry:
-
-- **URL**: `ghcr.io`
-- **Username**: your GitHub username
-- **Password**: a GitHub PAT with `read:packages` scope
-
-### 5. Push GitHub secrets
-
-```bash
-cp .env.example .env
-# Fill in DEPLOY_WEBHOOK_URL (copy the webhook URL from your PaaS)
-./scripts/setup-secrets.sh
-```
-
-### 6. Deploy
-
-```bash
-git push origin main
-```
-
-Every push to `main` builds, pushes to GHCR, and triggers a redeploy. That's it.
+3. Add GHCR registry credentials in your PaaS (ghcr.io, GitHub username, PAT with `read:packages`)
+4. Add `DEPLOY_WEBHOOK_URL` as a GitHub secret
+5. `git push origin main`
 
 ### Push DB changes
 
 ```bash
 pnpm db:push
 ```
-
-This uses `drizzle-kit push` to sync your schema directly to the database. No migrations.

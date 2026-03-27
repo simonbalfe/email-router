@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/simonbalfe/simple-boilerplate:latest
+    image: ghcr.io/simonbalfe/email-router:latest
     ports:
       - "${APP_PORT}:3000"
     environment:
