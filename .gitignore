@@ -1,0 +1,29 @@
+# dependencies
+node_modules
+
+# build outputs
+dist
+build
+.output
+
+# turbo
+.turbo
+
+# typescript
+*.tsbuildinfo
+
+# environment variables
+.env
+.env.*
+!.env.example
+
+# logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea
