@@ -5,8 +5,12 @@ import { cors } from 'hono/cors'
 import { auth } from './auth'
 import { config } from './config'
 import { authRoutes } from './routes/auth'
+import { classificationRoutes } from './routes/classifications'
 import { emailRoutes } from './routes/emails'
+import { incomingRoutes } from './routes/incoming'
+import { outgoingRoutes } from './routes/outgoing'
 import { serverInfoRoutes } from './routes/server-info'
+import { statusRoutes } from './routes/status'
 import { userRoutes } from './routes/users'
 
 interface OpenAPISchema {
@@ -33,6 +37,10 @@ const app = new Hono()
   })
   .route('/', authRoutes)
   .route('/', emailRoutes)
+  .route('/', classificationRoutes)
+  .route('/', incomingRoutes)
+  .route('/', outgoingRoutes)
+  .route('/', statusRoutes)
   .route('/', userRoutes)
   .route('/', serverInfoRoutes)
 

@@ -2,9 +2,21 @@ services:
   app:
     image: ghcr.io/simonbalfe/email-router:latest
     ports:
-      - "${APP_PORT}:3000"
+      - "3000:3000"
     environment:
       NODE_ENV: ${NODE_ENV}
       DATABASE_URL: ${DATABASE_URL}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       APP_URL: ${APP_URL}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      IMAP_HOST: ${IMAP_HOST}
+      IMAP_PORT: ${IMAP_PORT}
+      IMAP_USER: ${IMAP_USER}
+      IMAP_PASS: ${IMAP_PASS}
+      IMAP_FOLDER: ${IMAP_FOLDER}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      FORWARD_TO: ${FORWARD_TO}
+    restart: unless-stopped

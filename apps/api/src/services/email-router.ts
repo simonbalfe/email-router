@@ -8,11 +8,12 @@ import { z } from 'zod'
 import { config } from '../config'
 import { db } from '../db'
 import { processedEmail } from '../db/schema'
+import { getRulesAsInstructions } from './classification-rules'
 
 const openrouter = createOpenRouter({ apiKey: config.OPENROUTER_API_KEY })
 
 const classificationSchema = z.object({
-  label: z.enum(['request', 'spam', 'irrelevant']),
+  label: z.string(),
   confidence: z.number().min(0).max(1),
   reason: z.string(),
   forwardTo: z.string().nullable(),
@@ -20,20 +21,16 @@ const classificationSchema = z.object({
 
 type Classification = z.infer<typeof classificationSchema>
 
-const classifier = new Agent({
-  id: 'email-classifier',
-  name: 'email-classifier',
-  model: openrouter('anthropic/claude-sonnet-4'),
-  instructions: `You classify incoming emails and decide where to route them.
+const BASE_INSTRUCTIONS = `You classify incoming emails and decide where to route them.
 
-Rules:
+Default rules:
 - "request": genuine business inquiry, customer question, or action needed
 - "spam": promotional, unsolicited marketing, phishing
 - "irrelevant": automated notifications, newsletters, internal system emails
 
 For "request" emails, set forwardTo to "${config.forwardTo}".
-For spam/irrelevant, set forwardTo to null.`,
-})
+For spam/irrelevant, set forwardTo to null.
+If a custom rule specifies a forwardTo, use that instead.`
 
 const transporter = nodemailer.createTransport({
   host: config.smtp.host,
@@ -43,6 +40,14 @@ const transporter = nodemailer.createTransport({
 })
 
 async function classify(from: string, subject: string, body: string): Promise<Classification> {
+  const customRules = await getRulesAsInstructions()
+  const classifier = new Agent({
+    id: 'email-classifier',
+    name: 'email-classifier',
+    model: openrouter('anthropic/claude-sonnet-4'),
+    instructions: BASE_INSTRUCTIONS + customRules,
+  })
+
   const result = await classifier.generate(
     `From: ${from}\nSubject: ${subject}\n\n${body.slice(0, 3000)}`,
     { structuredOutput: { schema: classificationSchema } },

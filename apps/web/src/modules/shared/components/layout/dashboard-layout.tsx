@@ -28,7 +28,7 @@ export function DashboardLayout() {
     <div className="flex h-screen">
       <aside className="flex w-56 shrink-0 flex-col border-r bg-card p-4">
         <div className="mb-6 px-2">
-          <span className="text-sm font-semibold tracking-tight">App</span>
+          <span className="text-sm font-semibold tracking-tight">Email AI Monitor</span>
         </div>
 
         <nav className="flex flex-1 flex-col gap-1">

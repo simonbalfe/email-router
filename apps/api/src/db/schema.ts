@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm'
-import { boolean, doublePrecision, index, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
+import { boolean, doublePrecision, index, integer, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
 
 export const user = pgTable('user', {
   id: text('id').primaryKey(),
@@ -110,4 +110,46 @@ export const processedEmail = pgTable(
   (table) => [index('processed_email_message_id_idx').on(table.messageId)],
 )
 
-export const schema = { user, session, account, verification, processedEmail }
+export const classificationRule = pgTable('classification_rule', {
+  id: text('id').primaryKey(),
+  label: text('label').notNull(),
+  reason: text('reason').notNull(),
+  forwardTo: text('forward_to'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+export const incomingAccount = pgTable('incoming_account', {
+  id: text('id').primaryKey(),
+  label: text('label').notNull().default(''),
+  email: text('email').notNull(),
+  password: text('password').notNull(),
+  imapHost: text('imap_host').notNull(),
+  imapPort: integer('imap_port').notNull().default(993),
+  folder: text('folder').notNull().default('INBOX'),
+  department: text('department').notNull().default(''),
+  enabled: boolean('enabled').notNull().default(true),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+export const outgoingAccount = pgTable('outgoing_account', {
+  id: text('id').primaryKey(),
+  label: text('label').notNull().default(''),
+  email: text('email').notNull(),
+  password: text('password').notNull(),
+  smtpHost: text('smtp_host').notNull(),
+  smtpPort: integer('smtp_port').notNull().default(587),
+  routingCondition: text('routing_condition').notNull().default(''),
+  enabled: boolean('enabled').notNull().default(true),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+export const schema = {
+  user,
+  session,
+  account,
+  verification,
+  processedEmail,
+  classificationRule,
+  incomingAccount,
+  outgoingAccount,
+}
